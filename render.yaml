@@ -12,9 +12,11 @@ services:
       - key: STALK_HOSTED
         value: "true"
       - key: STALK_PROVIDER
-        value: free
+        value: groq
       - key: STALK_MODEL
-        value: openai-fast
+        value: llama-3.3-70b-versatile
+      - key: GROQ_API_KEY
+        sync: false
       - key: JWT_SECRET
         generateValue: true
       - key: DATABASE_URL

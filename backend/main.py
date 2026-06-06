@@ -17,7 +17,7 @@ from auth import (
     hash_password,
     verify_password,
 )
-from config import HOSTED, public_config
+from config import HOSTED, groq_key_configured, public_config
 from conversations import (
     add_message,
     conversation_to_dict,
@@ -39,10 +39,13 @@ FRONTEND = ROOT / "frontend"
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
+    cfg = public_config()
+    key_ok = groq_key_configured()
+    print(f"STalk started — AI provider: {cfg['provider']} | Groq key: {'yes' if key_ok else 'NO'}")
     yield
 
 
-app = FastAPI(title="STalk", version="1.1.0", lifespan=lifespan)
+app = FastAPI(title="STalk", version="1.1.1", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -116,7 +119,7 @@ def user_to_dict(user: User) -> dict:
 
 @app.get("/api/health")
 async def health():
-    return {"status": "ok", "name": "STalk", "version": "1.1.0"}
+    return {"status": "ok", "name": "STalk", "version": "1.1.1", "groq_configured": groq_key_configured()}
 
 
 @app.get("/api/config")

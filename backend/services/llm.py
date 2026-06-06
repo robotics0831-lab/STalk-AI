@@ -1,3 +1,4 @@
+import asyncio
 import os
 
 import httpx
@@ -74,6 +75,18 @@ async def chat_ollama(messages: list[dict], model: str = "llama3.2") -> str:
         return response.json()["message"]["content"]
 
 
+def _friendly_free_error(raw: str) -> str:
+    lower = raw.lower()
+    if "queue full" in lower:
+        return (
+            "STalk is busy right now (too many requests on the free AI). "
+            "Wait 15–20 seconds and try again."
+        )
+    if "rate limit" in lower or "429" in lower:
+        return "Too many requests. Please wait a moment and try again."
+    return raw[:300] if raw else "Free AI service unavailable. Try again in a moment."
+
+
 async def chat_free(
     messages: list[dict],
     model: str = "openai-fast",
@@ -95,26 +108,37 @@ async def chat_free(
         headers["Authorization"] = f"Bearer {optional_key}"
 
     last_error = "Free AI service unavailable. Try again in a moment."
+    max_attempts = 4 if not optional_key else 2
 
     async with api_client(timeout=180.0) as client:
-        for url in POLLINATIONS_CHAT_URLS:
-            try:
-                response = await client.post(url, json=payload, headers=headers)
-                if response.status_code >= 400:
-                    last_error = parse_api_error(response)
-                    continue
-                data = response.json()
-                return data["choices"][0]["message"]["content"]
-            except httpx.HTTPError as e:
-                last_error = str(e)
-                continue
-            except (KeyError, IndexError, TypeError):
-                text = (response.text or "").strip()
-                if text:
-                    return text
-                last_error = "Unexpected response from free AI service."
+        for attempt in range(max_attempts):
+            for url in POLLINATIONS_CHAT_URLS:
+                try:
+                    response = await client.post(url, json=payload, headers=headers)
+                    body_text = (response.text or "").strip()
 
-    raise ValueError(last_error)
+                    if response.status_code >= 400:
+                        last_error = parse_api_error(response) or body_text
+                        if "queue full" in last_error.lower() and attempt < max_attempts - 1:
+                            await asyncio.sleep(16)
+                            break
+                        continue
+
+                    try:
+                        data = response.json()
+                        return data["choices"][0]["message"]["content"]
+                    except (KeyError, IndexError, TypeError):
+                        if body_text and not body_text.startswith("{"):
+                            return body_text
+                        last_error = "Unexpected response from free AI service."
+                except httpx.HTTPError as e:
+                    last_error = str(e)
+                    continue
+            else:
+                continue
+            continue
+
+    raise ValueError(_friendly_free_error(last_error))
 
 
 async def chat_groq(
@@ -181,6 +205,18 @@ async def generate_response(
     model: str,
     api_key: str | None,
 ) -> str:
+    # Always use server Groq key when available (Render hosted)
+    env_groq = os.getenv("GROQ_API_KEY", "").strip()
+    if env_groq.startswith("gsk_"):
+        try:
+            return await chat_groq(messages, env_groq, model or "llama-3.3-70b-versatile")
+        except httpx.ProxyError:
+            raise ValueError("Network error reaching Groq. Try again in a moment.")
+        except ValueError:
+            raise
+        except Exception as e:
+            raise ValueError(f"Groq error: {e}")
+
     resolved_key = resolve_api_key(provider, api_key)
 
     if provider == "groq":

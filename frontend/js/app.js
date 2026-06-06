@@ -599,9 +599,12 @@ function applyHostedUI() {
 
   const welcome = document.querySelector("#welcome p");
   if (welcome && isHosted) {
-    welcome.textContent = currentUser
-      ? "Welcome back! Your chats are saved to your account."
-      : "Sign in to save chats. Guests start fresh each visit.";
+    if (serverConfig.groq_configured) {
+      welcome.textContent = "Welcome! Sign in to save chats. Powered by Groq AI.";
+    } else {
+      welcome.textContent =
+        "Sign in to save chats. Free AI mode — may be slow when busy. Owner: add GROQ_API_KEY on Render.";
+    }
   }
 }
 
