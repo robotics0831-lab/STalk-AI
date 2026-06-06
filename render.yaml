@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: stalk
+    runtime: docker
+    plan: free
+    healthCheckPath: /api/health
+    envVars:
+      - key: STALK_HOSTED
+        value: "true"
+      - key: STALK_PROVIDER
+        value: groq
+      - key: STALK_MODEL
+        value: llama-3.3-70b-versatile
+      - key: GROQ_API_KEY
+        sync: false
