@@ -11,9 +11,11 @@ COPY frontend ./frontend
 WORKDIR /app/backend
 
 ENV STALK_HOSTED=true
-ENV STALK_PROVIDER=groq
-ENV STALK_MODEL=llama-3.3-70b-versatile
+ENV STALK_PROVIDER=free
+ENV STALK_MODEL=openai-fast
 ENV PORT=8000
+
+RUN mkdir -p /app/data
 
 EXPOSE 8000
 

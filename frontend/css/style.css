@@ -95,6 +95,78 @@ body {
 .sidebar-footer {
   padding: 12px;
   border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.auth-area {
+  display: flex;
+  gap: 8px;
+}
+
+.auth-area.hidden {
+  display: none;
+}
+
+.auth-btn {
+  flex: 1;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+
+.auth-btn.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: white;
+}
+
+.auth-btn:hover {
+  opacity: 0.9;
+}
+
+.user-name {
+  flex: 1;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 8px 4px;
+}
+
+.auth-modal {
+  max-width: 400px;
+}
+
+.auth-tabs {
+  display: flex;
+  gap: 4px;
+  background: var(--bg-tertiary);
+  padding: 4px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+
+.auth-tab {
+  flex: 1;
+  padding: 8px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.875rem;
+}
+
+.auth-tab.active {
+  background: var(--bg);
+  color: var(--text);
 }
 
 .settings-btn {

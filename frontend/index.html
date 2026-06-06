@@ -20,6 +20,14 @@
       <div class="conversations" id="conversationList"></div>
 
       <div class="sidebar-footer">
+        <div class="auth-area" id="authArea">
+          <button class="auth-btn" id="signInBtn">Sign in</button>
+          <button class="auth-btn primary" id="signUpBtn">Sign up</button>
+        </div>
+        <div class="auth-area hidden" id="userArea">
+          <span class="user-name" id="userName"></span>
+          <button class="auth-btn" id="signOutBtn">Sign out</button>
+        </div>
         <button class="settings-btn" id="settingsBtn">
           <span>⚙</span> Settings
         </button>
@@ -67,7 +75,7 @@
             ></textarea>
             <button class="send-btn" id="sendBtn" disabled>↑</button>
           </div>
-          <p class="disclaimer">STalk can make mistakes. Verify important information.</p>
+          <p class="disclaimer">Chats are saved when you sign in. Guests start fresh each visit.</p>
         </div>
       </section>
 
@@ -93,6 +101,39 @@
     </main>
   </div>
 
+  <!-- Auth modal -->
+  <div class="modal hidden" id="authModal">
+    <div class="modal-backdrop" id="authBackdrop"></div>
+    <div class="modal-content auth-modal">
+      <div class="modal-header">
+        <h2 id="authTitle">Sign in to STalk</h2>
+        <button class="icon-btn" id="closeAuth">×</button>
+      </div>
+
+      <div class="auth-tabs">
+        <button class="auth-tab active" data-auth-tab="signin">Sign in</button>
+        <button class="auth-tab" data-auth-tab="signup">Sign up</button>
+      </div>
+
+      <form id="authForm">
+        <div class="setting-group hidden" id="nameGroup">
+          <label>Name</label>
+          <input type="text" id="authName" placeholder="Your name" autocomplete="name" />
+        </div>
+        <div class="setting-group">
+          <label>Email</label>
+          <input type="email" id="authEmail" placeholder="you@example.com" required autocomplete="email" />
+        </div>
+        <div class="setting-group">
+          <label>Password</label>
+          <input type="password" id="authPassword" placeholder="At least 6 characters" required minlength="6" autocomplete="current-password" />
+        </div>
+        <p class="setting-hint error hidden" id="authError"></p>
+        <button type="submit" class="primary-btn" id="authSubmit">Sign in</button>
+      </form>
+    </div>
+  </div>
+
   <!-- Settings modal -->
   <div class="modal hidden" id="settingsModal">
     <div class="modal-backdrop" id="settingsBackdrop"></div>
@@ -100,15 +141,6 @@
       <div class="modal-header">
         <h2>Settings</h2>
         <button class="icon-btn" id="closeSettings">×</button>
-      </div>
-
-      <div class="setting-group">
-        <label class="toggle-label">
-          <span>Remember past conversations</span>
-          <input type="checkbox" id="rememberConversations" checked />
-          <span class="toggle"></span>
-        </label>
-        <p class="setting-hint">Saves chats in your browser. Turn off for private sessions.</p>
       </div>
 
       <div class="setting-group">

@@ -1,11 +1,9 @@
 const STORAGE_KEYS = {
   settings: "stalk_settings",
-  conversations: "stalk_conversations",
-  currentId: "stalk_current_id",
+  token: "stalk_token",
 };
 
 const DEFAULT_SETTINGS = {
-  rememberConversations: true,
   personality: "friendly",
   customPrompt: "",
   provider: "groq",
@@ -16,11 +14,13 @@ const DEFAULT_SETTINGS = {
 };
 
 let settings = loadSettings();
-let conversations = loadConversations();
-let currentConversationId = localStorage.getItem(STORAGE_KEYS.currentId);
+let conversations = [];
+let currentConversationId = null;
 let uploadedFiles = [];
 let isGenerating = false;
 let serverConfig = { hosted: false, ready: true, provider: "groq", model: "llama-3.3-70b-versatile" };
+let currentUser = null;
+let authMode = "signin";
 
 // DOM
 const messagesEl = document.getElementById("messages");
@@ -35,7 +35,146 @@ const imageInput = document.getElementById("imageInput");
 const imageSendBtn = document.getElementById("imageSendBtn");
 const imageGallery = document.getElementById("imageGallery");
 const settingsModal = document.getElementById("settingsModal");
+const authModal = document.getElementById("authModal");
 const sidebar = document.getElementById("sidebar");
+
+// --- Auth & API ---
+
+function getToken() {
+  return localStorage.getItem(STORAGE_KEYS.token);
+}
+
+function authHeaders() {
+  const token = getToken();
+  const headers = { "Content-Type": "application/json" };
+  if (token) headers.Authorization = `Bearer ${token}`;
+  return headers;
+}
+
+function authHeadersOnly() {
+  const token = getToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
+function updateAuthUI() {
+  document.getElementById("authArea").classList.toggle("hidden", !!currentUser);
+  document.getElementById("userArea").classList.toggle("hidden", !currentUser);
+  if (currentUser) {
+    document.getElementById("userName").textContent = currentUser.name;
+  }
+}
+
+async function loadSession() {
+  const token = getToken();
+  if (!token) {
+    currentUser = null;
+    updateAuthUI();
+    return;
+  }
+  try {
+    const res = await fetch("/api/auth/me", { headers: authHeadersOnly() });
+    if (!res.ok) {
+      localStorage.removeItem(STORAGE_KEYS.token);
+      currentUser = null;
+      updateAuthUI();
+      return;
+    }
+    const data = await res.json();
+    currentUser = data.user;
+    updateAuthUI();
+    await loadConversationsFromServer();
+  } catch {
+    currentUser = null;
+    updateAuthUI();
+  }
+}
+
+async function loadConversationsFromServer() {
+  if (!currentUser) return;
+  try {
+    const res = await fetch("/api/conversations", { headers: authHeadersOnly() });
+    if (!res.ok) return;
+    const data = await res.json();
+    conversations = data.conversations.map((c) => ({ ...c, messages: c.messages || [] }));
+    renderConversationList();
+  } catch {
+    showError("Could not load your conversations.");
+  }
+}
+
+function openAuthModal(mode = "signin") {
+  setAuthTab(mode);
+  document.getElementById("authError").classList.add("hidden");
+  document.getElementById("authForm").reset();
+  authModal.classList.remove("hidden");
+}
+
+function closeAuthModal() {
+  authModal.classList.add("hidden");
+}
+
+function setAuthTab(mode) {
+  authMode = mode;
+  document.querySelectorAll(".auth-tab").forEach((t) => {
+    t.classList.toggle("active", t.dataset.authTab === mode);
+  });
+  document.getElementById("nameGroup").classList.toggle("hidden", mode !== "signup");
+  document.getElementById("authTitle").textContent = mode === "signup" ? "Create your account" : "Sign in to STalk";
+  document.getElementById("authSubmit").textContent = mode === "signup" ? "Sign up" : "Sign in";
+  document.getElementById("authPassword").autocomplete = mode === "signup" ? "new-password" : "current-password";
+}
+
+async function handleAuthSubmit(e) {
+  e.preventDefault();
+  const email = document.getElementById("authEmail").value.trim();
+  const password = document.getElementById("authPassword").value;
+  const name = document.getElementById("authName").value.trim();
+  const errorEl = document.getElementById("authError");
+
+  errorEl.classList.add("hidden");
+
+  const endpoint = authMode === "signup" ? "/api/auth/signup" : "/api/auth/login";
+  const body = authMode === "signup" ? { email, password, name } : { email, password };
+
+  if (authMode === "signup" && !name) {
+    errorEl.textContent = "Please enter your name.";
+    errorEl.classList.remove("hidden");
+    return;
+  }
+
+  try {
+    const res = await fetch(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      errorEl.textContent = data.detail || "Authentication failed.";
+      errorEl.classList.remove("hidden");
+      return;
+    }
+
+    localStorage.setItem(STORAGE_KEYS.token, data.token);
+    currentUser = data.user;
+    updateAuthUI();
+    closeAuthModal();
+    await loadConversationsFromServer();
+    newChat();
+  } catch {
+    errorEl.textContent = "Could not reach STalk server.";
+    errorEl.classList.remove("hidden");
+  }
+}
+
+function signOut() {
+  localStorage.removeItem(STORAGE_KEYS.token);
+  currentUser = null;
+  conversations = [];
+  currentConversationId = null;
+  updateAuthUI();
+  newChat();
+}
 
 // --- Storage ---
 
@@ -43,12 +182,6 @@ function getApiKeyForProvider(provider) {
   if (provider === "groq") return settings.groqApiKey || null;
   if (provider === "gemini") return settings.geminiApiKey || null;
   return null;
-}
-
-function getModelForProvider(provider) {
-  if (provider === "groq") return settings.model || "llama-3.3-70b-versatile";
-  if (provider === "gemini") return settings.model || "gemini-2.0-flash";
-  return settings.model || "llama3.2";
 }
 
 function loadSettings() {
@@ -63,44 +196,33 @@ function saveSettingsToStorage() {
   localStorage.setItem(STORAGE_KEYS.settings, JSON.stringify(settings));
 }
 
-function loadConversations() {
-  if (!settings.rememberConversations) return [];
-  try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEYS.conversations) || "[]");
-  } catch {
-    return [];
-  }
-}
-
-function saveConversations() {
-  if (!settings.rememberConversations) return;
-  localStorage.setItem(STORAGE_KEYS.conversations, JSON.stringify(conversations));
-}
-
 function getCurrentConversation() {
   if (!currentConversationId) return null;
   return conversations.find((c) => c.id === currentConversationId) || null;
 }
 
-function createConversation() {
-  const conv = {
-    id: crypto.randomUUID(),
-    title: "New chat",
-    messages: [],
-    createdAt: Date.now(),
-  };
+async function ensureConversation() {
+  let conv = getCurrentConversation();
+  if (conv) return conv;
+
+  if (currentUser) {
+    const res = await fetch("/api/conversations", {
+      method: "POST",
+      headers: authHeaders(),
+      body: JSON.stringify({ title: "New chat" }),
+    });
+    if (!res.ok) {
+      showError("Could not create conversation.");
+      return null;
+    }
+    conv = { ...(await res.json()), messages: [] };
+  } else {
+    conv = { id: crypto.randomUUID(), title: "New chat", messages: [] };
+  }
+
   conversations.unshift(conv);
   currentConversationId = conv.id;
-  localStorage.setItem(STORAGE_KEYS.currentId, conv.id);
-  saveConversations();
-  return conv;
-}
-
-function ensureConversation() {
-  let conv = getCurrentConversation();
-  if (!conv) {
-    conv = createConversation();
-  }
+  renderConversationList();
   return conv;
 }
 
@@ -127,7 +249,8 @@ function scrollToBottom() {
 
 function renderConversationList() {
   conversationListEl.innerHTML = "";
-  if (!settings.rememberConversations) return;
+
+  if (!currentUser && conversations.length === 0) return;
 
   conversations.forEach((conv) => {
     const btn = document.createElement("button");
@@ -138,9 +261,25 @@ function renderConversationList() {
   });
 }
 
-function loadConversation(id) {
+async function loadConversation(id) {
+  if (currentUser) {
+    try {
+      const res = await fetch(`/api/conversations/${id}`, { headers: authHeadersOnly() });
+      if (!res.ok) {
+        showError("Could not load conversation.");
+        return;
+      }
+      const conv = await res.json();
+      const idx = conversations.findIndex((c) => c.id === id);
+      if (idx >= 0) conversations[idx] = conv;
+      else conversations.unshift(conv);
+    } catch {
+      showError("Could not load conversation.");
+      return;
+    }
+  }
+
   currentConversationId = id;
-  localStorage.setItem(STORAGE_KEYS.currentId, id);
   uploadedFiles = [];
   renderUploadedFiles();
   renderMessages();
@@ -152,7 +291,7 @@ function renderMessages() {
   const conv = getCurrentConversation();
   messagesEl.innerHTML = "";
 
-  if (!conv || conv.messages.length === 0) {
+  if (!conv || !conv.messages || conv.messages.length === 0) {
     messagesEl.appendChild(welcomeEl.cloneNode(true));
     bindSuggestions();
     return;
@@ -174,15 +313,15 @@ function bindSuggestions() {
 }
 
 function appendMessage(role, content, save = true) {
-  welcomeEl.remove?.();
+  const conv = getCurrentConversation();
+  if (!conv) return;
 
-  const conv = ensureConversation();
   if (save) {
+    if (!conv.messages) conv.messages = [];
     conv.messages.push({ role, content });
     if (role === "user" && conv.title === "New chat") {
       conv.title = content.slice(0, 40) + (content.length > 40 ? "..." : "");
     }
-    saveConversations();
     renderConversationList();
   }
 
@@ -248,6 +387,9 @@ async function sendMessage() {
   const text = chatInput.value.trim();
   if (!text || isGenerating) return;
 
+  const conv = await ensureConversation();
+  if (!conv) return;
+
   isGenerating = true;
   sendBtn.disabled = true;
   chatInput.value = "";
@@ -256,7 +398,6 @@ async function sendMessage() {
   appendMessage("user", text);
   showTyping();
 
-  const conv = getCurrentConversation();
   const fileContext = uploadedFiles.map((f) => `--- ${f.filename} ---\n${f.context}`).join("\n\n");
 
   try {
@@ -264,9 +405,10 @@ async function sendMessage() {
     const model = serverConfig.hosted ? serverConfig.model : settings.model;
     const res = await fetch("/api/chat", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders(),
       body: JSON.stringify({
         messages: conv.messages.map((m) => ({ role: m.role, content: m.content })),
+        conversation_id: currentUser ? conv.id : null,
         personality: settings.personality,
         custom_prompt: settings.customPrompt,
         file_context: fileContext,
@@ -281,13 +423,19 @@ async function sendMessage() {
 
     if (!res.ok) {
       showError(data.detail || "Something went wrong");
+      if (conv.messages.length) conv.messages.pop();
       return;
     }
 
     appendMessage("assistant", data.reply);
-  } catch (err) {
+
+    if (currentUser) {
+      await loadConversationsFromServer();
+    }
+  } catch {
     hideTyping();
     showError("Could not reach STalk server. Is it running?");
+    if (conv.messages.length) conv.messages.pop();
   } finally {
     isGenerating = false;
     sendBtn.disabled = !chatInput.value.trim();
@@ -451,7 +599,9 @@ function applyHostedUI() {
 
   const welcome = document.querySelector("#welcome p");
   if (welcome && isHosted) {
-    welcome.textContent = "Your free AI assistant — just type a message and go.";
+    welcome.textContent = currentUser
+      ? "Welcome back! Your chats are saved to your account."
+      : "Sign in to save chats. Guests start fresh each visit.";
   }
 }
 
@@ -463,12 +613,11 @@ async function loadServerConfig() {
       applyHostedUI();
     }
   } catch {
-    // Local mode without config endpoint
+    // Local mode
   }
 }
 
 function openSettings() {
-  document.getElementById("rememberConversations").checked = settings.rememberConversations;
   document.getElementById("personality").value = settings.personality;
   document.getElementById("customPrompt").value = settings.customPrompt;
   document.getElementById("provider").value = settings.provider;
@@ -498,7 +647,7 @@ function updateSettingsUI() {
     modelHint.textContent = "Groq free tier model";
   } else if (provider === "gemini") {
     modelInput.value = settings.model || "gemini-2.5-flash";
-    modelHint.textContent = "Try gemini-2.5-flash. If quota is 0, your account may not have free tier — use Groq instead.";
+    modelHint.textContent = "Try gemini-2.5-flash";
   } else {
     modelInput.value = settings.model || "llama3.2";
     modelHint.innerHTML = 'For Ollama: run <code>ollama pull llama3.2</code>';
@@ -541,7 +690,6 @@ async function testConnection() {
 
 function saveSettings() {
   settings = {
-    rememberConversations: document.getElementById("rememberConversations").checked,
     personality: document.getElementById("personality").value,
     customPrompt: document.getElementById("customPrompt").value,
     provider: document.getElementById("provider").value,
@@ -551,23 +699,11 @@ function saveSettings() {
     autoSpeak: document.getElementById("autoSpeak").checked,
   };
   saveSettingsToStorage();
-
-  if (!settings.rememberConversations) {
-    conversations = [];
-    currentConversationId = null;
-    localStorage.removeItem(STORAGE_KEYS.conversations);
-    localStorage.removeItem(STORAGE_KEYS.currentId);
-  } else {
-    conversations = loadConversations();
-  }
-
-  renderConversationList();
   settingsModal.classList.add("hidden");
 }
 
 function newChat() {
   currentConversationId = null;
-  localStorage.removeItem(STORAGE_KEYS.currentId);
   uploadedFiles = [];
   renderUploadedFiles();
   messagesEl.innerHTML = "";
@@ -575,6 +711,7 @@ function newChat() {
   bindSuggestions();
   renderConversationList();
   sidebar.classList.remove("open");
+  applyHostedUI();
 }
 
 function switchMode(mode) {
@@ -626,6 +763,16 @@ document.getElementById("testConnection").addEventListener("click", testConnecti
 document.getElementById("personality").addEventListener("change", updateSettingsUI);
 document.getElementById("provider").addEventListener("change", updateSettingsUI);
 
+document.getElementById("signInBtn").addEventListener("click", () => openAuthModal("signin"));
+document.getElementById("signUpBtn").addEventListener("click", () => openAuthModal("signup"));
+document.getElementById("signOutBtn").addEventListener("click", signOut);
+document.getElementById("closeAuth").addEventListener("click", closeAuthModal);
+document.getElementById("authBackdrop").addEventListener("click", closeAuthModal);
+document.getElementById("authForm").addEventListener("submit", handleAuthSubmit);
+document.querySelectorAll(".auth-tab").forEach((tab) => {
+  tab.addEventListener("click", () => setAuthTab(tab.dataset.authTab));
+});
+
 document.querySelectorAll(".mode-tab").forEach((tab) => {
   tab.addEventListener("click", () => switchMode(tab.dataset.mode));
 });
@@ -635,12 +782,8 @@ document.getElementById("sidebarClose").addEventListener("click", () => sidebar.
 
 // --- Init ---
 
-loadServerConfig().then(() => {
+loadServerConfig().then(async () => {
   initSpeech();
-  renderConversationList();
-  renderMessages();
-
-  if (settings.rememberConversations && !currentConversationId && conversations.length > 0) {
-    loadConversation(conversations[0].id);
-  }
+  await loadSession();
+  newChat();
 });

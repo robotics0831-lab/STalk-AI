@@ -1,3 +1,7 @@
+databases:
+  - name: stalk-db
+    plan: free
+
 services:
   - type: web
     name: stalk
@@ -8,8 +12,12 @@ services:
       - key: STALK_HOSTED
         value: "true"
       - key: STALK_PROVIDER
-        value: groq
+        value: free
       - key: STALK_MODEL
-        value: llama-3.3-70b-versatile
-      - key: GROQ_API_KEY
-        sync: false
+        value: openai-fast
+      - key: JWT_SECRET
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: stalk-db
+          property: connectionString
