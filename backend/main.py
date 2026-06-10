@@ -17,7 +17,7 @@ from auth import (
     hash_password,
     verify_password,
 )
-from config import HOSTED, groq_key_configured, public_config
+from config import HOSTED, groq_key_configured, pollinations_key_configured, public_config
 from conversations import (
     add_message,
     conversation_to_dict,
@@ -41,11 +41,16 @@ async def lifespan(app: FastAPI):
     init_db()
     cfg = public_config()
     key_ok = groq_key_configured()
-    print(f"STalk started — AI provider: {cfg['provider']} | Groq key: {'yes' if key_ok else 'NO'}")
+    pol_ok = pollinations_key_configured()
+    print(
+        f"STalk started — AI provider: {cfg['provider']} | "
+        f"Groq key: {'yes' if key_ok else 'NO'} | "
+        f"Images: {'yes' if pol_ok else 'NO (add POLLINATIONS_API_KEY)'}"
+    )
     yield
 
 
-app = FastAPI(title="STalk", version="1.1.1", lifespan=lifespan)
+app = FastAPI(title="STalk", version="1.1.2", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -92,6 +97,8 @@ class ImageRequest(BaseModel):
     prompt: str = Field(min_length=1, max_length=2000)
     width: int = 1024
     height: int = 1024
+    api_key: str | None = None
+    model: str = "flux"
 
 
 class CreateConversationRequest(BaseModel):
@@ -119,7 +126,13 @@ def user_to_dict(user: User) -> dict:
 
 @app.get("/api/health")
 async def health():
-    return {"status": "ok", "name": "STalk", "version": "1.1.1", "groq_configured": groq_key_configured()}
+    return {
+        "status": "ok",
+        "name": "STalk",
+        "version": "1.1.2",
+        "groq_configured": groq_key_configured(),
+        "pollinations_configured": pollinations_key_configured(),
+    }
 
 
 @app.get("/api/config")
@@ -309,12 +322,17 @@ async def upload(file: UploadFile = File(...)):
 @app.post("/api/image")
 async def generate_image(req: ImageRequest, request: Request):
     check_rate_limit(request)
+    api_key = None if HOSTED else req.api_key
     try:
-        image_bytes = await image_service.generate_image(
-            req.prompt, req.width, req.height
+        image_bytes, mime = await image_service.generate_image(
+            req.prompt,
+            req.width,
+            req.height,
+            api_key=api_key,
+            model=req.model,
         )
         b64 = base64.b64encode(image_bytes).decode("ascii")
-        return {"image": f"data:image/jpeg;base64,{b64}"}
+        return {"image": f"data:{mime};base64,{b64}"}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:

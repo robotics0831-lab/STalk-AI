@@ -50,6 +50,11 @@ def groq_key_configured() -> bool:
     return key.startswith("gsk_")
 
 
+def pollinations_key_configured() -> bool:
+    key = os.getenv("POLLINATIONS_API_KEY", "").strip()
+    return key.startswith("sk_") or key.startswith("pk_")
+
+
 def public_config() -> dict:
     provider = effective_provider()
     return {
@@ -58,7 +63,8 @@ def public_config() -> dict:
         "provider": provider,
         "model": effective_model(),
         "name": "STalk",
-        "version": "1.1.1",
+        "version": "1.1.2",
         "no_api_key": provider == "free",
         "groq_configured": groq_key_configured(),
+        "pollinations_configured": pollinations_key_configured(),
     }

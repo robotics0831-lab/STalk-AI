@@ -9,6 +9,7 @@ const DEFAULT_SETTINGS = {
   provider: "groq",
   groqApiKey: "",
   geminiApiKey: "",
+  pollinationsApiKey: "",
   model: "llama-3.3-70b-versatile",
   autoSpeak: false,
 };
@@ -182,6 +183,10 @@ function getApiKeyForProvider(provider) {
   if (provider === "groq") return settings.groqApiKey || null;
   if (provider === "gemini") return settings.geminiApiKey || null;
   return null;
+}
+
+function getPollinationsApiKey() {
+  return settings.pollinationsApiKey || null;
 }
 
 function loadSettings() {
@@ -496,7 +501,10 @@ async function generateImage() {
     const res = await fetch("/api/image", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ prompt }),
+      body: JSON.stringify({
+        prompt,
+        api_key: serverConfig.hosted ? null : getPollinationsApiKey(),
+      }),
     });
     const data = await res.json();
     loading.remove();
@@ -596,6 +604,7 @@ function applyHostedUI() {
   const isHosted = serverConfig.hosted;
   document.getElementById("hostedNotice").classList.toggle("hidden", !isHosted);
   document.getElementById("aiConfigGroup").classList.toggle("hidden", isHosted);
+  document.getElementById("pollinationsKeyGroup").classList.toggle("hidden", isHosted);
 
   const welcome = document.querySelector("#welcome p");
   if (welcome && isHosted) {
@@ -604,6 +613,20 @@ function applyHostedUI() {
     } else {
       welcome.textContent =
         "Sign in to save chats. Free AI mode — may be slow when busy. Owner: add GROQ_API_KEY on Render.";
+    }
+  }
+
+  const imageWelcome = document.querySelector("#imageView .image-welcome p");
+  if (imageWelcome) {
+    if (isHosted) {
+      imageWelcome.textContent = serverConfig.pollinations_configured
+        ? "Describe an image and STalk will create it for you."
+        : "Images need a free Pollinations API key. Owner: add POLLINATIONS_API_KEY on Render.";
+    } else if (!getPollinationsApiKey()) {
+      imageWelcome.textContent =
+        "Add a free Pollinations API key in Settings to generate images.";
+    } else {
+      imageWelcome.textContent = "Describe an image and STalk will create it for you.";
     }
   }
 }
@@ -626,6 +649,7 @@ function openSettings() {
   document.getElementById("provider").value = settings.provider;
   document.getElementById("groqApiKey").value = settings.groqApiKey;
   document.getElementById("geminiApiKey").value = settings.geminiApiKey || "";
+  document.getElementById("pollinationsApiKey").value = settings.pollinationsApiKey || "";
   document.getElementById("model").value = settings.model;
   document.getElementById("autoSpeak").checked = settings.autoSpeak;
   document.getElementById("connectionStatus").textContent = "";
@@ -698,6 +722,7 @@ function saveSettings() {
     provider: document.getElementById("provider").value,
     groqApiKey: document.getElementById("groqApiKey").value.trim(),
     geminiApiKey: document.getElementById("geminiApiKey").value.trim(),
+    pollinationsApiKey: document.getElementById("pollinationsApiKey").value.trim(),
     model: document.getElementById("model").value.trim(),
     autoSpeak: document.getElementById("autoSpeak").checked,
   };

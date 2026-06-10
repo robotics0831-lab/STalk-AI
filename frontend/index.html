@@ -160,7 +160,7 @@
       </div>
 
       <div class="setting-group hidden" id="hostedNotice">
-        <p class="setting-hint ok">STalk is live on the web — no API keys needed. Just chat!</p>
+        <p class="setting-hint ok">STalk is live on the web. Chat uses Groq; images need POLLINATIONS_API_KEY on Render.</p>
       </div>
 
       <div id="aiConfigGroup">
@@ -191,6 +191,12 @@
 
       <button class="primary-btn secondary" id="testConnection">Test Connection</button>
       <p class="setting-hint" id="connectionStatus"></p>
+      </div>
+
+      <div class="setting-group" id="pollinationsKeyGroup">
+        <label>Pollinations API Key (for Images) <a href="https://enter.pollinations.ai" target="_blank">(free)</a></label>
+        <input type="password" id="pollinationsApiKey" placeholder="sk_..." />
+        <p class="setting-hint">Required for image generation. Chat uses Groq; images use Pollinations.</p>
       </div>
 
       <div class="setting-group">
