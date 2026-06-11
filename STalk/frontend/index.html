@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>STalk — Your AI Assistant</title>
+  <link rel="stylesheet" href="/css/style.css?v=1.1.4" />
+</head>
+<body>
+  <div class="app">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <h1 class="logo">STalk</h1>
+        <button class="icon-btn" id="newChatBtn" title="New chat">+</button>
+      </div>
+
+      <button class="sidebar-toggle" id="sidebarClose">×</button>
+
+      <p class="conversations-label">Your chats</p>
+      <div class="conversations" id="conversationList"></div>
+
+      <div class="sidebar-footer">
+        <div class="auth-area" id="authArea">
+          <button class="auth-btn" id="signInBtn">Sign in</button>
+          <button class="auth-btn primary" id="signUpBtn">Sign up</button>
+        </div>
+        <div class="auth-area hidden" id="userArea">
+          <span class="user-name" id="userName"></span>
+          <button class="auth-btn" id="signOutBtn">Sign out</button>
+        </div>
+        <button class="settings-btn" id="settingsBtn">
+          <span>⚙</span> Settings
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main -->
+    <main class="main">
+      <header class="topbar">
+        <button class="icon-btn menu-btn" id="menuBtn">☰</button>
+        <span class="mode-label" id="modeLabel">Chat</span>
+        <button class="delete-chat-btn hidden" id="deleteChatBtn" title="Delete this chat">Delete chat</button>
+        <div class="mode-tabs">
+          <button class="mode-tab active" data-mode="chat">Chat</button>
+          <button class="mode-tab" data-mode="image">Images</button>
+        </div>
+      </header>
+
+      <!-- Chat view -->
+      <section class="view active" id="chatView">
+        <div class="messages" id="messages">
+          <div class="welcome" id="welcome">
+            <h2>Welcome to STalk</h2>
+            <p>Your free AI assistant. Ask anything, upload files, or use voice chat.</p>
+            <div class="suggestions">
+              <button class="suggestion" data-prompt="Explain quantum computing simply">Explain quantum computing</button>
+              <button class="suggestion" data-prompt="Help me write a short story">Write a short story</button>
+              <button class="suggestion" data-prompt="Debug this Python code for me">Help with code</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="uploaded-files" id="uploadedFiles"></div>
+
+        <div class="input-area">
+          <div class="input-row">
+            <label class="icon-btn attach-btn" title="Upload file">
+              📎
+              <input type="file" id="fileInput" accept=".txt,.md,.pdf,.csv,.json" hidden />
+            </label>
+            <button class="icon-btn" id="voiceBtn" title="Voice input">🎤</button>
+            <textarea
+              id="chatInput"
+              placeholder="Message STalk..."
+              rows="1"
+            ></textarea>
+            <button class="send-btn" id="sendBtn" disabled>↑</button>
+          </div>
+          <p class="disclaimer">Chats are saved when you sign in. Guests start fresh each visit.</p>
+        </div>
+      </section>
+
+      <!-- Image view -->
+      <section class="view" id="imageView">
+        <div class="image-gallery" id="imageGallery">
+          <div class="welcome image-welcome">
+            <h2>Image Generation</h2>
+            <p>Describe an image and STalk will create it for free.</p>
+          </div>
+        </div>
+        <div class="input-area">
+          <div class="input-row">
+            <textarea
+              id="imageInput"
+              placeholder="Describe the image you want..."
+              rows="1"
+            ></textarea>
+            <button class="send-btn" id="imageSendBtn">↑</button>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Auth modal -->
+  <div class="modal hidden" id="authModal">
+    <div class="modal-backdrop" id="authBackdrop"></div>
+    <div class="modal-content auth-modal">
+      <div class="modal-header">
+        <h2 id="authTitle">Sign in to STalk</h2>
+        <button class="icon-btn" id="closeAuth">×</button>
+      </div>
+
+      <div class="auth-tabs">
+        <button class="auth-tab active" data-auth-tab="signin">Sign in</button>
+        <button class="auth-tab" data-auth-tab="signup">Sign up</button>
+      </div>
+
+      <form id="authForm">
+        <div class="setting-group hidden" id="nameGroup">
+          <label>Name</label>
+          <input type="text" id="authName" placeholder="Your name" autocomplete="name" />
+        </div>
+        <div class="setting-group">
+          <label>Email</label>
+          <input type="email" id="authEmail" placeholder="you@example.com" required autocomplete="email" />
+        </div>
+        <div class="setting-group">
+          <label>Password</label>
+          <input type="password" id="authPassword" placeholder="At least 6 characters" required minlength="6" autocomplete="current-password" />
+        </div>
+        <p class="setting-hint error hidden" id="authError"></p>
+        <button type="submit" class="primary-btn" id="authSubmit">Sign in</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Settings modal -->
+  <div class="modal hidden" id="settingsModal">
+    <div class="modal-backdrop" id="settingsBackdrop"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Settings</h2>
+        <button class="icon-btn" id="closeSettings">×</button>
+      </div>
+
+      <div class="setting-group">
+        <label>Personality</label>
+        <select id="personality">
+          <option value="friendly">Friendly</option>
+          <option value="professional">Professional</option>
+          <option value="creative">Creative</option>
+          <option value="teacher">Teacher</option>
+          <option value="custom">Custom</option>
+        </select>
+      </div>
+
+      <div class="setting-group hidden" id="customPromptGroup">
+        <label>Custom personality prompt</label>
+        <textarea id="customPrompt" rows="3" placeholder="Describe how STalk should behave..."></textarea>
+      </div>
+
+      <div class="setting-group hidden" id="hostedNotice">
+        <p class="setting-hint ok">STalk is live on the web. Chat uses Groq; images need POLLINATIONS_API_KEY on Render.</p>
+      </div>
+
+      <div id="aiConfigGroup">
+      <div class="setting-group">
+        <label>AI Provider (free options)</label>
+        <select id="provider">
+          <option value="groq">Groq (cloud, free tier) — recommended</option>
+          <option value="ollama">Ollama (local, free, unlimited)</option>
+          <option value="gemini">Google Gemini (cloud, free tier)</option>
+        </select>
+      </div>
+
+      <div class="setting-group" id="groqKeyGroup">
+        <label>Groq API Key <a href="https://console.groq.com" target="_blank">(free)</a></label>
+        <input type="password" id="groqApiKey" placeholder="gsk_..." />
+      </div>
+
+      <div class="setting-group hidden" id="geminiKeyGroup">
+        <label>Gemini API Key <a href="https://aistudio.google.com/apikey" target="_blank">(free)</a></label>
+        <input type="password" id="geminiApiKey" placeholder="AIza..." />
+      </div>
+
+      <div class="setting-group">
+        <label>Model</label>
+        <input type="text" id="model" value="llama3.2" />
+        <p class="setting-hint" id="modelHint">For Ollama: run <code>ollama pull llama3.2</code></p>
+      </div>
+
+      <button class="primary-btn secondary" id="testConnection">Test Connection</button>
+      <p class="setting-hint" id="connectionStatus"></p>
+      </div>
+
+      <div class="setting-group" id="pollinationsKeyGroup">
+        <label>Pollinations API Key (for Images) <a href="https://enter.pollinations.ai" target="_blank">(free)</a></label>
+        <input type="password" id="pollinationsApiKey" placeholder="sk_..." />
+        <p class="setting-hint">Required for image generation. Chat uses Groq; images use Pollinations.</p>
+      </div>
+
+      <div class="setting-group">
+        <label class="toggle-label">
+          <span>Auto-read replies aloud (voice chat)</span>
+          <input type="checkbox" id="autoSpeak" />
+          <span class="toggle"></span>
+        </label>
+      </div>
+
+
+      <button class="primary-btn" id="saveSettings">Save Settings</button>
+    </div>
+  </div>
+
+  <script src="/js/app.js?v=1.1.4"></script>
+</body>
+</html>
