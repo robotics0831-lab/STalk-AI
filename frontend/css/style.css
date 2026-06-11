@@ -69,9 +69,23 @@ body {
   padding: 8px;
 }
 
+.conversation-row {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-bottom: 2px;
+  border-radius: 8px;
+}
+
+.conversation-row:hover,
+.conversation-row.active {
+  background: var(--bg-tertiary);
+}
+
 .conversation-item {
+  flex: 1;
+  min-width: 0;
   display: block;
-  width: 100%;
   text-align: left;
   padding: 10px 12px;
   border: none;
@@ -83,13 +97,36 @@ body {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  margin-bottom: 2px;
 }
 
-.conversation-item:hover,
-.conversation-item.active {
-  background: var(--bg-tertiary);
+.conversation-row:hover .conversation-item,
+.conversation-row.active .conversation-item {
   color: var(--text);
+}
+
+.conversation-delete {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  margin-right: 4px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 1.1rem;
+  line-height: 1;
+  opacity: 0.35;
+}
+
+.conversation-row:hover .conversation-delete,
+.conversation-row.active .conversation-delete {
+  opacity: 1;
+}
+
+.conversation-delete:hover {
+  background: rgba(255, 80, 80, 0.15);
+  color: #ff6b6b;
 }
 
 .sidebar-footer {

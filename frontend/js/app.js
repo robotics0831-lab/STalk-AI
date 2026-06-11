@@ -258,12 +258,57 @@ function renderConversationList() {
   if (!currentUser && conversations.length === 0) return;
 
   conversations.forEach((conv) => {
+    const row = document.createElement("div");
+    row.className = "conversation-row" + (conv.id === currentConversationId ? " active" : "");
+
     const btn = document.createElement("button");
-    btn.className = "conversation-item" + (conv.id === currentConversationId ? " active" : "");
-    btn.textContent = conv.title;
+    btn.className = "conversation-item";
+    btn.textContent = conv.title || "New chat";
     btn.onclick = () => loadConversation(conv.id);
-    conversationListEl.appendChild(btn);
+
+    const delBtn = document.createElement("button");
+    delBtn.className = "conversation-delete";
+    delBtn.title = "Delete chat";
+    delBtn.setAttribute("aria-label", "Delete chat");
+    delBtn.textContent = "×";
+    delBtn.onclick = (e) => deleteConversation(conv.id, e);
+
+    row.appendChild(btn);
+    row.appendChild(delBtn);
+    conversationListEl.appendChild(row);
   });
+}
+
+async function deleteConversation(id, event) {
+  event.stopPropagation();
+
+  if (currentUser) {
+    try {
+      const res = await fetch(`/api/conversations/${id}`, {
+        method: "DELETE",
+        headers: authHeadersOnly(),
+      });
+      if (!res.ok) {
+        showError("Could not delete conversation.");
+        return;
+      }
+    } catch {
+      showError("Could not delete conversation.");
+      return;
+    }
+  }
+
+  conversations = conversations.filter((c) => c.id !== id);
+
+  if (currentConversationId === id) {
+    if (conversations.length > 0) {
+      await loadConversation(conversations[0].id);
+    } else {
+      newChat();
+    }
+  } else {
+    renderConversationList();
+  }
 }
 
 async function loadConversation(id) {
