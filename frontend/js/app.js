@@ -252,10 +252,35 @@ function scrollToBottom() {
   messagesEl.scrollTop = messagesEl.scrollHeight;
 }
 
+function canDeleteConversation(id) {
+  return conversations.some((c) => c.id === id);
+}
+
+function updateDeleteButtonVisibility() {
+  const btn = document.getElementById("deleteChatBtn");
+  if (!btn) return;
+  const chatMode = document.querySelector(".mode-tab.active")?.dataset.mode === "chat";
+  const show =
+    chatMode &&
+    currentUser &&
+    currentConversationId &&
+    canDeleteConversation(currentConversationId);
+  btn.classList.toggle("hidden", !show);
+}
+
 function renderConversationList() {
   conversationListEl.innerHTML = "";
 
-  if (!currentUser && conversations.length === 0) return;
+  if (conversations.length === 0) {
+    const empty = document.createElement("p");
+    empty.className = "conversations-empty";
+    empty.textContent = currentUser
+      ? "No saved chats yet. Send a message to start one."
+      : "Sign in to save and delete your chats.";
+    conversationListEl.appendChild(empty);
+    updateDeleteButtonVisibility();
+    return;
+  }
 
   conversations.forEach((conv) => {
     const row = document.createElement("div");
@@ -270,17 +295,26 @@ function renderConversationList() {
     delBtn.className = "conversation-delete";
     delBtn.title = "Delete chat";
     delBtn.setAttribute("aria-label", "Delete chat");
-    delBtn.textContent = "×";
+    delBtn.textContent = "🗑";
     delBtn.onclick = (e) => deleteConversation(conv.id, e);
 
     row.appendChild(btn);
     row.appendChild(delBtn);
     conversationListEl.appendChild(row);
   });
+
+  updateDeleteButtonVisibility();
+}
+
+async function deleteCurrentConversation() {
+  if (!currentConversationId || !canDeleteConversation(currentConversationId)) return;
+  await deleteConversation(currentConversationId);
 }
 
 async function deleteConversation(id, event) {
-  event.stopPropagation();
+  event?.stopPropagation();
+  if (!canDeleteConversation(id)) return;
+  if (!confirm("Delete this chat permanently?")) return;
 
   if (currentUser) {
     try {
@@ -334,6 +368,7 @@ async function loadConversation(id) {
   renderUploadedFiles();
   renderMessages();
   renderConversationList();
+  updateDeleteButtonVisibility();
   sidebar.classList.remove("open");
 }
 
@@ -783,6 +818,7 @@ function newChat() {
   messagesEl.appendChild(welcomeEl.cloneNode(true));
   bindSuggestions();
   renderConversationList();
+  updateDeleteButtonVisibility();
   sidebar.classList.remove("open");
   applyHostedUI();
 }
@@ -792,6 +828,7 @@ function switchMode(mode) {
   document.getElementById("chatView").classList.toggle("active", mode === "chat");
   document.getElementById("imageView").classList.toggle("active", mode === "image");
   document.getElementById("modeLabel").textContent = mode === "chat" ? "Chat" : "Images";
+  updateDeleteButtonVisibility();
 }
 
 // --- Event listeners ---
@@ -828,6 +865,7 @@ imageInput.addEventListener("keydown", (e) => {
 imageSendBtn.addEventListener("click", generateImage);
 
 document.getElementById("newChatBtn").addEventListener("click", newChat);
+document.getElementById("deleteChatBtn").addEventListener("click", deleteCurrentConversation);
 document.getElementById("settingsBtn").addEventListener("click", openSettings);
 document.getElementById("closeSettings").addEventListener("click", () => settingsModal.classList.add("hidden"));
 document.getElementById("settingsBackdrop").addEventListener("click", () => settingsModal.classList.add("hidden"));
