@@ -3,7 +3,10 @@ const STORAGE_KEYS = {
   token: "stalk_token",
 };
 
+const TRASH_ICON_SVG = `<svg class="trash-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>`;
+
 const DEFAULT_SETTINGS = {
+  theme: "dark",
   personality: "friendly",
   customPrompt: "",
   provider: "groq",
@@ -201,6 +204,48 @@ function saveSettingsToStorage() {
   localStorage.setItem(STORAGE_KEYS.settings, JSON.stringify(settings));
 }
 
+function applyTheme(theme) {
+  const resolved = theme === "light" ? "light" : "dark";
+  document.documentElement.setAttribute("data-theme", resolved);
+  updateThemeToggleUI();
+}
+
+function updateThemeToggleUI() {
+  const isLight = settings.theme === "light";
+  const sidebarLabel = document.getElementById("themeToggleLabel");
+  const sidebarIcon = document.getElementById("themeToggleIcon");
+  const topbarIcon = document.getElementById("topbarThemeIcon");
+  const topbarText = document.getElementById("topbarThemeText");
+  const topbarBtn = document.getElementById("topbarThemeBtn");
+  const sidebarBtn = document.getElementById("themeToggleBtn");
+  const themeSelect = document.getElementById("theme");
+
+  const nextLabel = isLight ? "Dark mode" : "Light mode";
+  const nextShort = isLight ? "Dark" : "Light";
+  const nextIcon = isLight ? "🌙" : "☀";
+  const nextTitle = isLight ? "Switch to dark mode" : "Switch to light mode";
+
+  if (sidebarLabel) sidebarLabel.textContent = nextLabel;
+  if (sidebarIcon) sidebarIcon.textContent = nextIcon;
+  if (topbarIcon) topbarIcon.textContent = nextIcon;
+  if (topbarText) topbarText.textContent = nextShort;
+  if (topbarBtn) {
+    topbarBtn.title = nextTitle;
+    topbarBtn.setAttribute("aria-label", nextTitle);
+  }
+  if (sidebarBtn) {
+    sidebarBtn.title = nextTitle;
+    sidebarBtn.setAttribute("aria-label", nextTitle);
+  }
+  if (themeSelect) themeSelect.value = isLight ? "light" : "dark";
+}
+
+function toggleTheme() {
+  settings.theme = settings.theme === "light" ? "dark" : "light";
+  applyTheme(settings.theme);
+  saveSettingsToStorage();
+}
+
 function getCurrentConversation() {
   if (!currentConversationId) return null;
   return conversations.find((c) => c.id === currentConversationId) || null;
@@ -295,7 +340,7 @@ function renderConversationList() {
     delBtn.className = "conversation-delete";
     delBtn.title = "Delete chat";
     delBtn.setAttribute("aria-label", "Delete chat");
-    delBtn.textContent = "🗑";
+    delBtn.innerHTML = TRASH_ICON_SVG;
     delBtn.onclick = (e) => deleteConversation(conv.id, e);
 
     row.appendChild(btn);
@@ -724,6 +769,7 @@ async function loadServerConfig() {
 }
 
 function openSettings() {
+  document.getElementById("theme").value = settings.theme === "light" ? "light" : "dark";
   document.getElementById("personality").value = settings.personality;
   document.getElementById("customPrompt").value = settings.customPrompt;
   document.getElementById("provider").value = settings.provider;
@@ -797,6 +843,7 @@ async function testConnection() {
 
 function saveSettings() {
   settings = {
+    theme: document.getElementById("theme").value === "light" ? "light" : "dark",
     personality: document.getElementById("personality").value,
     customPrompt: document.getElementById("customPrompt").value,
     provider: document.getElementById("provider").value,
@@ -806,6 +853,7 @@ function saveSettings() {
     model: document.getElementById("model").value.trim(),
     autoSpeak: document.getElementById("autoSpeak").checked,
   };
+  applyTheme(settings.theme);
   saveSettingsToStorage();
   settingsModal.classList.add("hidden");
 }
@@ -864,6 +912,15 @@ imageInput.addEventListener("keydown", (e) => {
 
 imageSendBtn.addEventListener("click", generateImage);
 
+document.getElementById("theme").addEventListener("change", (e) => {
+  settings.theme = e.target.value === "light" ? "light" : "dark";
+  applyTheme(settings.theme);
+  saveSettingsToStorage();
+});
+
+document.getElementById("themeToggleBtn").addEventListener("click", toggleTheme);
+document.getElementById("topbarThemeBtn").addEventListener("click", toggleTheme);
+
 document.getElementById("newChatBtn").addEventListener("click", newChat);
 document.getElementById("deleteChatBtn").addEventListener("click", deleteCurrentConversation);
 document.getElementById("settingsBtn").addEventListener("click", openSettings);
@@ -895,6 +952,7 @@ document.getElementById("sidebarClose").addEventListener("click", () => sidebar.
 
 loadServerConfig().then(async () => {
   initSpeech();
+  applyTheme(settings.theme);
   await loadSession();
   newChat();
 });
