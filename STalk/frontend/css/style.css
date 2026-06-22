@@ -1,4 +1,6 @@
-:root {
+:root,
+[data-theme="dark"] {
+  color-scheme: dark;
   --bg: #0f0f0f;
   --bg-secondary: #1a1a1a;
   --bg-tertiary: #262626;
@@ -10,9 +12,30 @@
   --user-bg: #2f2f2f;
   --assistant-bg: transparent;
   --danger: #ef4444;
+  --danger-soft: rgba(255, 80, 80, 0.15);
+  --danger-text: #ff8a8a;
+  --overlay: rgba(0, 0, 0, 0.6);
   --sidebar-width: 260px;
   --radius: 12px;
   --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+[data-theme="light"] {
+  color-scheme: light;
+  --bg: #ffffff;
+  --bg-secondary: #f7f7f8;
+  --bg-tertiary: #ececf1;
+  --border: #d9d9e3;
+  --text: #0d0d0d;
+  --text-muted: #676767;
+  --accent: #10a37f;
+  --accent-hover: #0d8c6d;
+  --user-bg: #f0f0f0;
+  --assistant-bg: transparent;
+  --danger: #ef4444;
+  --danger-soft: rgba(239, 68, 68, 0.12);
+  --danger-text: #dc2626;
+  --overlay: rgba(0, 0, 0, 0.45);
 }
 
 * {
@@ -124,38 +147,46 @@ body {
 
 .conversation-delete {
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
   margin-right: 6px;
-  padding: 4px 8px;
-  border: 1px solid rgba(255, 100, 100, 0.3);
+  padding: 0;
+  border: none;
   border-radius: 6px;
-  background: rgba(255, 80, 80, 0.1);
-  color: #ff9a9a;
-  font-size: 0.7rem;
-  font-weight: 600;
+  background: transparent;
+  color: var(--text-muted);
   cursor: pointer;
-  line-height: 1.2;
 }
 
 .conversation-delete:hover {
-  background: rgba(255, 80, 80, 0.22);
-  border-color: rgba(255, 100, 100, 0.5);
+  background: var(--danger-soft);
+  color: var(--danger-text);
 }
 
 .delete-chat-btn {
-  padding: 6px 12px;
-  border: 1px solid rgba(255, 100, 100, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: none;
   border-radius: 8px;
-  background: rgba(255, 80, 80, 0.08);
-  color: #ff8a8a;
-  font-size: 0.8rem;
-  font-weight: 500;
+  background: transparent;
+  color: var(--text-muted);
   cursor: pointer;
-  white-space: nowrap;
 }
 
 .delete-chat-btn:hover {
-  background: rgba(255, 80, 80, 0.18);
-  border-color: rgba(255, 100, 100, 0.55);
+  background: var(--danger-soft);
+  color: var(--danger-text);
+}
+
+.trash-icon {
+  display: block;
 }
 
 .sidebar-footer {
@@ -253,6 +284,11 @@ body {
   background: var(--bg-tertiary);
 }
 
+.theme-toggle-icon {
+  font-size: 1rem;
+  line-height: 1;
+}
+
 /* Main */
 .main {
   flex: 1;
@@ -275,7 +311,32 @@ body {
 
 .mode-label {
   font-weight: 600;
-  flex: 1;
+}
+
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.theme-tab-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  background: var(--bg-secondary);
+  color: var(--text);
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.theme-tab-btn:hover {
+  background: var(--bg-tertiary);
 }
 
 .mode-tabs {
@@ -627,7 +688,7 @@ body {
 .modal-backdrop {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.6);
+  background: var(--overlay);
 }
 
 .modal-content {

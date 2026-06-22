@@ -4,7 +4,17 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>STalk — Your AI Assistant</title>
-  <link rel="stylesheet" href="/css/style.css?v=1.1.4" />
+  <script>
+    (function () {
+      try {
+        var settings = JSON.parse(localStorage.getItem("stalk_settings") || "{}");
+        document.documentElement.setAttribute("data-theme", settings.theme === "light" ? "light" : "dark");
+      } catch (e) {
+        document.documentElement.setAttribute("data-theme", "dark");
+      }
+    })();
+  </script>
+  <link rel="stylesheet" href="/css/style.css?v=1.2.2" />
 </head>
 <body>
   <div class="app">
@@ -29,6 +39,10 @@
           <span class="user-name" id="userName"></span>
           <button class="auth-btn" id="signOutBtn">Sign out</button>
         </div>
+        <button class="settings-btn" id="themeToggleBtn" type="button">
+          <span class="theme-toggle-icon" id="themeToggleIcon" aria-hidden="true">☀</span>
+          <span id="themeToggleLabel">Light mode</span>
+        </button>
         <button class="settings-btn" id="settingsBtn">
           <span>⚙</span> Settings
         </button>
@@ -40,10 +54,18 @@
       <header class="topbar">
         <button class="icon-btn menu-btn" id="menuBtn">☰</button>
         <span class="mode-label" id="modeLabel">Chat</span>
-        <button class="delete-chat-btn hidden" id="deleteChatBtn" title="Delete this chat">Delete chat</button>
-        <div class="mode-tabs">
-          <button class="mode-tab active" data-mode="chat">Chat</button>
-          <button class="mode-tab" data-mode="image">Images</button>
+        <button class="delete-chat-btn hidden" id="deleteChatBtn" title="Delete this chat" aria-label="Delete this chat">
+          <svg class="trash-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+        </button>
+        <div class="topbar-right">
+          <button class="theme-tab-btn" id="topbarThemeBtn" type="button" title="Switch to light mode" aria-label="Switch to light mode">
+            <span id="topbarThemeIcon" aria-hidden="true">☀</span>
+            <span id="topbarThemeText">Light</span>
+          </button>
+          <div class="mode-tabs">
+            <button class="mode-tab active" data-mode="chat">Chat</button>
+            <button class="mode-tab" data-mode="image">Images</button>
+          </div>
         </div>
       </header>
 
@@ -146,6 +168,14 @@
       </div>
 
       <div class="setting-group">
+        <label>Theme</label>
+        <select id="theme">
+          <option value="dark">Dark</option>
+          <option value="light">Light</option>
+        </select>
+      </div>
+
+      <div class="setting-group">
         <label>Personality</label>
         <select id="personality">
           <option value="friendly">Friendly</option>
@@ -214,6 +244,6 @@
     </div>
   </div>
 
-  <script src="/js/app.js?v=1.1.4"></script>
+  <script src="/js/app.js?v=1.2.2"></script>
 </body>
 </html>
